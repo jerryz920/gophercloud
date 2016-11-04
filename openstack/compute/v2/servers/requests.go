@@ -183,6 +183,9 @@ type CreateOpts struct {
 
 	// AccessIPv6 [optional] specifies an IPv6 address for the instance.
 	AccessIPv6 string
+
+	// Requested Cloud Container ID
+	CloudContainerId string
 }
 
 // ToServerCreateMap assembles a request body based on the contents of a CreateOpts.
@@ -217,8 +220,14 @@ func (opts CreateOpts) ToServerCreateMap() (map[string]interface{}, error) {
 	if opts.AccessIPv6 != "" {
 		server["accessIPv6"] = opts.AccessIPv6
 	}
+	if opts.CloudContainerId != "" {
+		server["container_tag"] = opts.CloudContainerId
+	}
 
-	if len(opts.SecurityGroups) > 0 {
+	// We don't need security group when a cloud container is specified, as the
+	// cloud container will automatically provision a security group based on the
+	// policy file.
+	if len(opts.SecurityGroups) > 0 && opts.CloudContainerId != "" {
 		securityGroups := make([]map[string]interface{}, len(opts.SecurityGroups))
 		for i, groupName := range opts.SecurityGroups {
 			securityGroups[i] = map[string]interface{}{"name": groupName}
@@ -226,7 +235,9 @@ func (opts CreateOpts) ToServerCreateMap() (map[string]interface{}, error) {
 		server["security_groups"] = securityGroups
 	}
 
-	if len(opts.Networks) > 0 {
+	// We don't create network if a cloud container is specified, as the cloud container
+	// will come with a default network
+	if len(opts.Networks) > 0 && opts.CloudContainerId != "" {
 		networks := make([]map[string]interface{}, len(opts.Networks))
 		for i, net := range opts.Networks {
 			networks[i] = make(map[string]interface{})
